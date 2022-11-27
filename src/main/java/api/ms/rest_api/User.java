@@ -1,7 +1,6 @@
 package api.ms.rest_api;
 
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.RoutingContext;
 
@@ -13,8 +12,8 @@ public class User extends AbstractVerticle {
   String password;
   private Database database;
 
-  public User() {
-    this.database = new Database(Vertx.vertx());
+  public User(Database database) {
+    this.database = database;
   }
 
   public User(String login, String password) {
@@ -27,21 +26,19 @@ public class User extends AbstractVerticle {
     this.id = jsonObject.getString("_id");
     this.login = jsonObject.getString("login");
     this.password = jsonObject.getString("password");
-
   }
 
 
-  public void addUser(RoutingContext context) {
+  public void registerUser(RoutingContext context) {
     context
       .request()
       .bodyHandler(buffer -> {
         JsonObject object = buffer.toJsonObject();
         if (!isJsonValid(object)) {
-          userNotRegisteredResponse(context);
+          database.responseWithTextAndCode("please provide valid password and login", 404, context);
           return;
         }
-        database.saveUser(object);
-        userRegisteredResponse(context);
+        database.saveUser(object, context);
 
       });
   }
@@ -53,32 +50,27 @@ public class User extends AbstractVerticle {
     return Validate.isLoginValid(jsonObject.getString("login")) && Validate.isPasswordStrong(jsonObject.getString("password"));
   }
 
-  private void userNotRegisteredResponse(RoutingContext context) {
-    context
-      .response()
-      .setStatusCode(404)
-      .setStatusMessage("Login or password invalid")
-      .end("please provide valid password and login");
-
-  }
-
-  private void userRegisteredResponse(RoutingContext context) {
-    context
-      .response()
-      .setStatusCode(204)
-      .setStatusMessage("Registering successfull")
-      .end();
-  }
 
   public void getAllUsers(RoutingContext context) {
     database.getAllUsers(context);
-
   }
+
+  public void handleUserLogin(RoutingContext context) {
+    context
+      .request()
+      .bodyHandler(buffer -> {
+        JsonObject object = buffer.toJsonObject();
+        database.checkIfUsersIsInDatabase(object, context);
+      });
+  }
+
 
   JsonObject getUserAsJson() {
     return new JsonObject()
       .put("login", login)
       .put("password", password);
+
   }
+
 
 }
