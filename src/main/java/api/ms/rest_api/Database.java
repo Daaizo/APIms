@@ -44,8 +44,8 @@ public class Database {
       if (listAsyncResult.succeeded() && listAsyncResult.result().isEmpty()) {
         jsonObject.put("_id", UUID.randomUUID().toString());
         client.save(collectionName, jsonObject);
-        this.responseWithTextAndCode("Registering successfull", 200, context);
-      } else this.responseWithTextAndCode("User with this login exists", 404, context);
+        this.responseWithTextAndCode("Registering successfull", 204, context);
+      } else this.responseWithTextAndCode("User with this login exists", 409, context);
     });
   }
 
@@ -55,48 +55,47 @@ public class Database {
     client.find(collectionName, entries, res -> {
       if (res.succeeded()) {
         List<JsonObject> jsonObjectList = res.result();
-        context.response().end(Json.encodePrettily(jsonObjectList));
-        for (JsonObject jsonObject : res.result()) {
-          System.out.println("jsonObject = " + jsonObject);
-        }
+        this.responseWithTextAndCode(Json.encodePrettily(jsonObjectList), 200, context);
       }
     });
   }
 
   public void checkIfUsersIsInDatabase(JsonObject dataFromLogin, RoutingContext context) {
     JsonObject query = new JsonObject().put("login", dataFromLogin.getValue("login"));
-
-//    Future<List<JsonObject>> listFuture = client.find(collectionName, query);
-//    System.out.println("listFuture = " + listFuture.succeeded());
-    // not workign ??????????????????????
-
     client.find(collectionName, query, listAsyncResult -> {
       if (listAsyncResult.succeeded() && !listAsyncResult.result().isEmpty()) {
         JsonObject dataFromDb = listAsyncResult.result().get(0);
         if (verifyUserIdentity(dataFromLogin, dataFromDb)) {
-          context
-            .response()
-            .setStatusCode(200)
-            .putHeader("content-type", "text/html; charset=UTF-8")
-            .end(authorization.createToken(dataFromDb.getString("login")));
-        } else {
-          context
-            .response()
-            .setStatusCode(401)
-            .putHeader("content-type", "text/html; charset=UTF-8")
-            .end("Login or password is incorrect");
-        }
-      } else {
-        context
-          .response()
-          .setStatusCode(401)
-          .putHeader("content-type", "text/html; charset=UTF-8")
-          .end("Login or password is incorrect");
+          String token = authorization.createToken(dataFromDb.getString("login"));
+          authorization.checkToken(token);
+          JsonObject jsonObject = new JsonObject().put("token", token);
+          this.responseWithJsonAndCode(jsonObject, 200, context);
+        } else this.responseWithTextAndCode("Login or password is incorrect", 409, context);
+      } else this.responseWithTextAndCode("Login or password is incorrect", 409, context);
+
+    });
+  }
+
+
+  public void addItemForUser(JsonObject item, String userLogin, RoutingContext context) {
+    JsonObject query = new JsonObject().put("login", userLogin);
+    client.find(collectionName, query, listAsyncResult -> {
+      if (listAsyncResult.succeeded()) {
+        JsonObject user = listAsyncResult.result().get(0);
+        String userId = user.getString("_id");
+        System.out.println("userId = " + userId);
+        System.out.println("item " + item.encodePrettily());
+        JsonObject itemJson = new JsonObject(); // TODO wywoloac item z konstruktora klasy Item lub z metody jakiejs
+        itemJson
+          .put("_id", UUID.randomUUID().toString())
+          .put("owner", userId)
+          .put("name", item.getValue("title"));
+        client.save(collectionName, itemJson);
+        this.responseWithTextAndCode("Item created successfull", 204, context);
       }
     });
-    //working ?????????? this is the SAMEEE
-
   }
+
 
   public boolean verifyUserIdentity(JsonObject dataFromLogin, JsonObject dataFromDb) {
     return dataFromLogin.getString("password").equals(dataFromDb.getString("password"));
@@ -118,20 +117,5 @@ public class Database {
       .end(text);
   }
 
-  private void userNotRegisteredResponse(RoutingContext context) {
-    context
-      .response()
-      .setStatusCode(404)
-      .setStatusMessage("Login or password invalid")
-      .end("please provide valid password and login");
-  }
-
-  private void userRegisteredResponse(RoutingContext context) {
-    context
-      .response()
-      .setStatusCode(204)
-      .setStatusMessage("Registering successfull")
-      .end();
-  }
 
 }
