@@ -4,6 +4,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpServer;
 import io.vertx.ext.web.Router;
+import io.vertx.ext.web.handler.JWTAuthHandler;
 import org.apache.log4j.BasicConfigurator;
 import org.apache.log4j.LogManager;
 import org.slf4j.Logger;
@@ -28,10 +29,11 @@ public class MainVerticle extends AbstractVerticle {
 
   private void setEndpoints(Vertx vertx1, Router router) {
     Authorization authorization = new Authorization(vertx1);
-    Database data = new Database(authorization, vertx1);
-    User user = new User(data);
+    Database db = new Database(authorization, vertx1);
+    Item item = new Item(db);
+    User user = new User(db);
     router
-      .post("/add")
+      .post("/register")
       .handler(user::registerUser);
 
     router
@@ -41,6 +43,21 @@ public class MainVerticle extends AbstractVerticle {
     router
       .post("/login")
       .handler(user::handleUserLogin);
+
+    router
+      .route("/items/*")
+      .handler(JWTAuthHandler.create(authorization.getProvider()));
+
+    router
+      .post("/items")
+      .handler(item::addItem);
+
+
+    router
+      .get("/items")
+      .handler(context1 -> {
+        context1.response().end("some user items");
+      });
 
   }
 
@@ -56,7 +73,7 @@ public class MainVerticle extends AbstractVerticle {
   private void configureLogger() {
     BasicConfigurator.configure();
     LogManager.getLogger("org.mongodb.driver.cluster").setLevel(org.apache.log4j.Level.OFF);
-//    LogManager.getLogger("io.netty.buffer.PooledByteBufAllocator").setLevel(org.apache.log4j.Level.OFF);
-//    LogManager.getLogger("org.mongodb.driver.protocol.command").setLevel(org.apache.log4j.Level.OFF);
+    LogManager.getLogger("io.netty.buffer.PooledByteBufAllocator").setLevel(org.apache.log4j.Level.OFF);
+    LogManager.getLogger("org.mongodb.driver.protocol.command").setLevel(org.apache.log4j.Level.OFF);
   }
 }
