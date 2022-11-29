@@ -17,21 +17,38 @@ public class Authorization {
         .setBuffer("some secret password")));
   }
 
-  public String createToken(String login) {
-    return provider.generateToken(
-      new JsonObject().put("name", login));
-  }
 
   public JWTAuth getProvider() {
     return provider;
   }
 
-  public void failedAuthentication(RoutingContext context) {
+  public void failedAuthenticationResponse(RoutingContext context) {
     context
       .response()
       .putHeader("Content-type", "application/json; charset=utf-8")
       .setStatusCode(401)
       .setStatusMessage("You have not provided an authentication token, the one provided has expired, was revoked or is not authentic.")
       .end(context.failure().getMessage());
+  }
+
+  private String createToken(String login) {
+    return provider.generateToken(
+      new JsonObject().put("_id", login));
+  }
+
+  public JsonObject getToken(JsonObject dataFromDb, JsonObject dataFromLogin) {
+    if (verifyUserIdentity(dataFromLogin, dataFromDb)) {
+      String token = createToken(dataFromDb.getString("_id"));
+      return new JsonObject().put("token", token);
+    }
+    return null;
+  }
+
+  public String getTokenOwnersId(RoutingContext context) {
+    return context.user().principal().getString("_id");
+  }
+
+  private boolean verifyUserIdentity(JsonObject dataFromLogin, JsonObject dataFromDb) {
+    return dataFromLogin.getString("password").equals(dataFromDb.getString("password"));
   }
 }
