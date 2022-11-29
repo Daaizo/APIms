@@ -50,7 +50,8 @@ public class MainVerticle extends AbstractVerticle {
 
     router
       .post("/items")
-      .handler(item::addItem);
+      .handler(item::addItem)
+      .failureHandler(authorization::failedAuthentication);
 
 
     router
