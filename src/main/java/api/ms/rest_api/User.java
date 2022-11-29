@@ -23,9 +23,16 @@ public class User extends AbstractVerticle {
   }
 
   public User(JsonObject jsonObject) {
-    this.id = jsonObject.getString("_id");
+    this.id = UUID.randomUUID().toString();
     this.login = jsonObject.getString("login");
-    this.password = jsonObject.getString("password");
+    this.password = Password.encryptPassword(jsonObject.getString("password"));
+  }
+
+  public JsonObject getUserAsJson() {
+    return new JsonObject()
+      .put("_id", this.id)
+      .put("login", this.login)
+      .put("password", this.password);
   }
 
 

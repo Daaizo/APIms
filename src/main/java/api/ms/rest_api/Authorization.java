@@ -2,6 +2,7 @@ package api.ms.rest_api;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.JWTOptions;
 import io.vertx.ext.auth.PubSecKeyOptions;
 import io.vertx.ext.auth.jwt.JWTAuth;
 import io.vertx.ext.auth.jwt.JWTAuthOptions;
@@ -17,7 +18,6 @@ public class Authorization {
         .setBuffer("some secret password")));
   }
 
-
   public JWTAuth getProvider() {
     return provider;
   }
@@ -29,11 +29,6 @@ public class Authorization {
       .setStatusCode(401)
       .setStatusMessage("You have not provided an authentication token, the one provided has expired, was revoked or is not authentic.")
       .end(context.failure().getMessage());
-  }
-
-  private String createToken(String login) {
-    return provider.generateToken(
-      new JsonObject().put("_id", login));
   }
 
   public JsonObject getToken(JsonObject dataFromDb, JsonObject dataFromLogin) {
@@ -49,6 +44,13 @@ public class Authorization {
   }
 
   private boolean verifyUserIdentity(JsonObject dataFromLogin, JsonObject dataFromDb) {
-    return dataFromLogin.getString("password").equals(dataFromDb.getString("password"));
+    String passwordEncrypted = dataFromDb.getString("password");
+    String passwordFromLoginForm = dataFromLogin.getString("password");
+    return Password.verifyPassword(passwordFromLoginForm, passwordEncrypted);
+  }
+
+  private String createToken(String login) {
+    return provider.generateToken(
+      new JsonObject().put("_id", login), new JWTOptions().setExpiresInMinutes(1));
   }
 }

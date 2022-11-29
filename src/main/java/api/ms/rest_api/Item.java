@@ -20,16 +20,12 @@ public class Item {
     this.ownerId = ownerId;
     this.name = name;
   }
-
   public void getUserItems(RoutingContext context) {
     database.getUsersItems(context);
   }
 
   public void addItem(RoutingContext context) {
-    // String token = context.request().getHeader("Authorization");
-    // String tokenValue = token.substring("Bearer".length());
     try {
-
       context
         .request()
         .bodyHandler(buffer -> {
@@ -40,7 +36,6 @@ public class Item {
       System.out.println("Unauthorized");
     }
   }
-
   public JsonObject getItemAsJson() {
     return
       new JsonObject()

@@ -60,13 +60,13 @@ public class MainVerticle extends AbstractVerticle {
 
   }
 
-  private void startServer(Vertx vertx1, Router router) {
+  public void startServer(Vertx vertx1, Router router) {
     HttpServer server = vertx1.createHttpServer();
     server
       .requestHandler(router)
       .listen(3000)
       .onSuccess(server1 -> logger.info("server listening on port " + server1.actualPort()))
-      .onFailure(throwable -> System.out.println("throwable = " + throwable.getCause()));
+      .onFailure(throwable -> System.out.println("server start failure " + throwable.getCause()));
   }
 
   private void configureLogger() {

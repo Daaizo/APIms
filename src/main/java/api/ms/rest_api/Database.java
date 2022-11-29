@@ -8,7 +8,6 @@ import io.vertx.ext.mongo.MongoClient;
 import io.vertx.ext.web.RoutingContext;
 
 import java.util.List;
-import java.util.UUID;
 
 public class Database {
 
@@ -39,13 +38,12 @@ public class Database {
     });
   }
 
-  public void saveUser(JsonObject jsonObject, RoutingContext context) {
-    JsonObject query = new JsonObject().put("login", jsonObject.getValue("login"));
-
+  public void saveUser(JsonObject dataFromRequestBody, RoutingContext context) {
+    JsonObject query = new JsonObject().put("login", dataFromRequestBody.getValue("login"));
     client.find(collectionWithUsers, query, listAsyncResult -> {
       if (listAsyncResult.succeeded() && listAsyncResult.result().isEmpty()) {
-        jsonObject.put("_id", UUID.randomUUID().toString());
-        client.save(collectionWithUsers, jsonObject);
+        User user = new User(dataFromRequestBody);
+        client.save(collectionWithUsers, user.getUserAsJson());
         this.responseWithStatusDescriptionAndCode("Registering successfull", 204, context);
       } else this.responseWithStatusDescriptionAndCode("User with this login exists", 409, context);
     });
@@ -62,7 +60,8 @@ public class Database {
   }
 
   public void checkIfUsersIsInDatabaseAndResponseWithToken(JsonObject dataFromLogin, RoutingContext context) {
-    client.find(collectionWithUsers, dataFromLogin, listAsyncResult -> {
+    JsonObject query = new JsonObject().put("login", dataFromLogin.getValue("login"));
+    client.find(collectionWithUsers, query, listAsyncResult -> {
       if (listAsyncResult.succeeded() && !listAsyncResult.result().isEmpty()) {
         JsonObject dataFromDb = listAsyncResult.result().get(0);
         JsonObject token = authorization.getToken(dataFromDb, dataFromLogin);
@@ -82,7 +81,7 @@ public class Database {
     String userId = authorization.getTokenOwnersId(context);
     JsonObject query = new JsonObject().put("_id", userId);
     client.find(collectionWithUsers, query, listAsyncResult -> {
-      if (listAsyncResult.succeeded()) {
+      if (listAsyncResult.succeeded() && !listAsyncResult.result().isEmpty()) {
         saveItem(listAsyncResult.result().get(0), itemFromRequestBody);
         responseWithStatusDescriptionAndCode("Item created successfull", 204, context);
       }
