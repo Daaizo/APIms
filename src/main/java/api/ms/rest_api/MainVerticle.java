@@ -36,9 +36,6 @@ public class MainVerticle extends AbstractVerticle {
       .post("/register")
       .handler(user::registerUser);
 
-    router
-      .get("/all")
-      .handler(user::getAllUsers);
 
     router
       .post("/login")
@@ -46,19 +43,20 @@ public class MainVerticle extends AbstractVerticle {
 
     router
       .route("/items/*")
-      .handler(JWTAuthHandler.create(authorization.getProvider()));
+      .handler(JWTAuthHandler.create(authorization.getProvider()))
+      .failureHandler(authorization::failedAuthenticationResponse);
 
     router
       .post("/items")
-      .handler(item::addItem)
-      .failureHandler(authorization::failedAuthentication);
+      .handler(item::addItem);
 
 
     router
       .get("/items")
-      .handler(context1 -> {
-        context1.response().end("some user items");
-      });
+      .handler(item::getUserItems);
+    router
+      .get("/all")
+      .handler(user::getAllUsers);
 
   }
 

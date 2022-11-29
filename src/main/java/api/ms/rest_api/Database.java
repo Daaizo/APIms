@@ -61,18 +61,14 @@ public class Database {
     });
   }
 
-  public void checkIfUsersIsInDatabase(JsonObject dataFromLogin, RoutingContext context) {
-    // JsonObject query = new JsonObject().put("login", dataFromLogin.getValue("login"));
+  public void checkIfUsersIsInDatabaseAndResponseWithToken(JsonObject dataFromLogin, RoutingContext context) {
     client.find(collectionWithUsers, dataFromLogin, listAsyncResult -> {
       if (listAsyncResult.succeeded() && !listAsyncResult.result().isEmpty()) {
         JsonObject dataFromDb = listAsyncResult.result().get(0);
-        if (verifyUserIdentity(dataFromLogin, dataFromDb)) {
-          String token = authorization.createToken(dataFromDb.getString("login"));
-          JsonObject jsonObject = new JsonObject().put("token", token);
-          this.responseWithJsonAndCode(jsonObject, 200, context);
-        } else this.responseWithStatusDescriptionAndCode("Login or password is incorrect", 409, context);
-      } else this.responseWithStatusDescriptionAndCode("Login or password is incorrect", 409, context);
-
+        JsonObject token = authorization.getToken(dataFromDb, dataFromLogin);
+        if (token != null) this.responseWithJsonAndCode(token, context);
+        else responseWithStatusDescriptionAndCode("Login or password is incorrect", 409, context);
+      } else responseWithStatusDescriptionAndCode("Login or password is incorrect", 409, context);
     });
   }
 
@@ -82,8 +78,9 @@ public class Database {
     client.save(collectionWithItems, item.getItemAsJson());
   }
 
-  public void addItemForUser(JsonObject itemFromRequestBody, String userLogin, RoutingContext context) {
-    JsonObject query = new JsonObject().put("login", userLogin);
+  public void addItemForUser(JsonObject itemFromRequestBody, RoutingContext context) {
+    String userId = authorization.getTokenOwnersId(context);
+    JsonObject query = new JsonObject().put("_id", userId);
     client.find(collectionWithUsers, query, listAsyncResult -> {
       if (listAsyncResult.succeeded()) {
         saveItem(listAsyncResult.result().get(0), itemFromRequestBody);
@@ -93,11 +90,20 @@ public class Database {
   }
 
 
-  public boolean verifyUserIdentity(JsonObject dataFromLogin, JsonObject dataFromDb) {
-    return dataFromLogin.getString("password").equals(dataFromDb.getString("password"));
+  public void getUsersItems(RoutingContext context) {
+    String tokenOwnersId = authorization.getTokenOwnersId(context);
+    JsonObject query = new JsonObject().put("owner", tokenOwnersId);
+    client.find(collectionWithItems, query, listAsyncResult -> {
+      if (listAsyncResult.succeeded()) {
+        List<JsonObject> jsonObjectList = listAsyncResult.result();
+        jsonObjectList.forEach(jsonObject -> jsonObject.remove("owner"));
+        this.responseWithTextAndCode(Json.encodePrettily(jsonObjectList), 200, context);
+      }
+    });
   }
 
-  public void responseWithJsonAndCode(JsonObject jsonObject, int statusCode, RoutingContext context) {
+  private void responseWithJsonAndCode(JsonObject jsonObject, RoutingContext context) {
+    int statusCode = 200;
     context
       .response()
       .setStatusCode(statusCode)
@@ -105,7 +111,7 @@ public class Database {
       .end(Json.encodePrettily(jsonObject));
   }
 
-  public void responseWithTextAndCode(String text, int statusCode, RoutingContext context) {
+  void responseWithTextAndCode(String text, int statusCode, RoutingContext context) {
     context
       .response()
       .setStatusCode(statusCode)
@@ -113,7 +119,7 @@ public class Database {
       .end(text);
   }
 
-  public void responseWithStatusDescriptionAndCode(String text, int statusCode, RoutingContext context) {
+  private void responseWithStatusDescriptionAndCode(String text, int statusCode, RoutingContext context) {
     context
       .response()
       .setStatusCode(statusCode)

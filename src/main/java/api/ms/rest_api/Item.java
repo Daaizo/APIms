@@ -21,16 +21,20 @@ public class Item {
     this.name = name;
   }
 
+  public void getUserItems(RoutingContext context) {
+    database.getUsersItems(context);
+  }
+
   public void addItem(RoutingContext context) {
     // String token = context.request().getHeader("Authorization");
     // String tokenValue = token.substring("Bearer".length());
     try {
-      String tokenOwnersLogin = context.user().principal().getString("name");
+
       context
         .request()
         .bodyHandler(buffer -> {
           JsonObject item = buffer.toJsonObject();
-          database.addItemForUser(item, tokenOwnersLogin, context);
+          database.addItemForUser(item, context);
         });
     } catch (RuntimeException e) {
       System.out.println("Unauthorized");

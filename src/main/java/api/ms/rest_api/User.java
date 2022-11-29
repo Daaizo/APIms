@@ -35,7 +35,7 @@ public class User extends AbstractVerticle {
       .bodyHandler(buffer -> {
         JsonObject object = buffer.toJsonObject();
         if (!isJsonValid(object)) {
-          database.responseWithTextAndCode("please provide valid password and login", 404, context);
+          database.responseWithTextAndCode("please provide valid password and login", 422, context);
           return;
         }
         database.saveUser(object, context);
@@ -60,17 +60,7 @@ public class User extends AbstractVerticle {
       .request()
       .bodyHandler(buffer -> {
         JsonObject object = buffer.toJsonObject();
-        database.checkIfUsersIsInDatabase(object, context);
+        database.checkIfUsersIsInDatabaseAndResponseWithToken(object, context);
       });
   }
-
-
-  JsonObject getUserAsJson() {
-    return new JsonObject()
-      .put("login", login)
-      .put("password", password);
-
-  }
-
-
 }
