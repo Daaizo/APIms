@@ -32,10 +32,15 @@ public class MainVerticle extends AbstractVerticle {
     Database db = new Database(authorization, vertx1);
     Item item = new Item(db);
     User user = new User(db);
+
+    router.route("/").handler(routingContext -> {
+      routingContext.response().sendFile("index.html");
+
+    });
+
     router
       .post("/register")
       .handler(user::registerUser);
-
 
     router
       .post("/login")

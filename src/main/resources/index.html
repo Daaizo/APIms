@@ -1,0 +1,110 @@
+<html>
+<head>
+
+</head>
+<body>
+<div id="loginDiv">
+  <h1>Test website</h1>
+  Login: <label for="login"></label><input id="login" type="text">
+  Password: <label for="password"></label><input id="password" type="password">
+  <button onclick="sendJSON('/login')">Login</button>
+  <button onclick="sendJSON('/register')">Register</button>
+</div>
+
+<button id="logoutButton" onclick="logout()" style="display:none">Logout</button>
+<p class="serverResponseText"></p>
+<div id="items" style="display:none">
+  <h1>
+    User items
+  </h1>
+</div>
+<div id="addItem" style="display:none">
+  <h3> add item</h3>
+  Name: <label for="name"></label><input id="name" type="text">
+  <button onclick="addItem()">Add item</button>
+</div>
+
+
+<script>
+  var USER_TOKEN = "";
+
+  function getUserItems() {
+    const items = document.querySelector('#items');
+    items.style.display = 'block';
+    document.querySelector('#addItem').style.display = 'block';
+    items.innerHTML = "User items : <br>";
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", "/items", true);
+    xhr.setRequestHeader("Authorization", "Bearer " + USER_TOKEN);
+
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4) {
+        const jsonData = JSON.parse(this.responseText);
+        if (jsonData.length === 0) items.innerHTML += "no items";
+        else {
+          for (let i = 0; i < jsonData.length; i++) {
+            items.innerHTML += jsonData[i].name + "</br>";
+          }
+        }
+      }
+    };
+    xhr.send();
+  }
+
+  function logout() {
+    USER_TOKEN = "";
+    document.querySelector('#logoutButton').style.display = 'none';
+    document.querySelector('#addItem').style.display = 'none';
+    document.querySelector('#items').style.display = 'none';
+    document.querySelector('#loginDiv').style.display = 'block';
+    document.querySelector('#password').value = '';
+    document.querySelector('#login').value = '';
+  }
+
+  function addItem() {
+    let name = document.querySelector('#name');
+
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", "/items", true);
+    xhr.setRequestHeader("Authorization", "Bearer " + USER_TOKEN);
+
+    var data = JSON.stringify({"title": name.value});
+
+    xhr.send(data);
+    xhr.onreadystatechange = function () {
+      if (this.readyState === 4 && this.status === 204) {
+        getUserItems();
+      }
+    };
+
+  }
+
+  function sendJSON(url) {
+
+    let result = document.querySelector('.serverResponseText');
+    let login = document.querySelector('#login');
+    let password = document.querySelector('#password');
+
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader("Content-Type", "application/json");
+
+    var data = JSON.stringify({"login": login.value, "password": password.value});
+
+    xhr.send(data);
+    xhr.onreadystatechange = function () {
+      if (this.readyState === 4 && this.status === 200) {
+        const js = JSON.parse(this.responseText);
+        USER_TOKEN = js.token;
+        document.querySelector('#logoutButton').style.display = 'block';
+        document.querySelector('#loginDiv').style.display = 'none';
+        getUserItems();
+      }
+      result.innerHTML = "server response : " + this.statusText;
+    };
+  }
+
+
+</script>
+</body>
+</html>

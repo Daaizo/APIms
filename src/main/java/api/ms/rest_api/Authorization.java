@@ -51,6 +51,6 @@ public class Authorization {
 
   private String createToken(String login) {
     return provider.generateToken(
-      new JsonObject().put("_id", login), new JWTOptions().setExpiresInMinutes(1));
+      new JsonObject().put("_id", login), new JWTOptions().setExpiresInMinutes(10));
   }
 }
